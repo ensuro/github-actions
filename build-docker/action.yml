@@ -25,7 +25,6 @@ inputs:
   test_build_args:
     description: "Build args for test build"
     required: false
-    default: []
   additional_tag:
     description: "Additional tag to apply to the image"
     required: false
