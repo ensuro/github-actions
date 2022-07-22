@@ -11,6 +11,7 @@ inputs:
   run_tests:
     description: "Run the tests job using docker-compose"
     required: true
+    type: boolean
     default: false
 
 outputs:
@@ -28,5 +29,5 @@ runs:
       shell: bash
 
     - run: echo "Conditional step, should not run"
-      if: inputs.run_tests == true
+      if: ${{ inputs.run_tests }}
       shell: bash
