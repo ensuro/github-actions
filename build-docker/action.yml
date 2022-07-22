@@ -73,6 +73,15 @@ runs:
         cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
         cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache,mode=max
 
+    - name: Test the image
+      if: ${{ inputs.run_tests == 'true' }}
+      run: |
+        docker-compose -f docker-compose.test-image.yml up \
+            --exit-code-from tests \
+            --abort-on-container-exit \
+            --force-recreate
+      shell: bash
+
     # - id: test
     #   run: |
     #     echo "::set-output name=test::$(echo $RANDOM)"
