@@ -35,6 +35,13 @@ runs:
         credentials_json: "${{ inputs.google_credentials }}"
         token_format: "access_token"
 
+    # Setup docker CLI
+    - uses: "docker/login-action@v1"
+      with:
+        registry: "${{ inputs.registry }}"
+        username: "oauth2accesstoken"
+        password: "${{ steps.auth.outputs.access_token }}"
+
     # - id: test
     #   run: |
     #     echo "::set-output name=test::$(echo $RANDOM)"
