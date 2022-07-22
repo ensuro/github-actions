@@ -69,7 +69,7 @@ runs:
           type=semver,pattern={{major}}.{{minor}}
           type=sha
           type=schedule,pattern={{date 'YYYYMMDD'}}
-          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != "" }}
+          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build image locally for testing
