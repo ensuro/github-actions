@@ -17,9 +17,8 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - run: |
-        echo "${{ inputs.registry }}/${{ inputs.image }}"
-
     - id: test
-      run: echo "::set-output name=test::$(echo $RANDOM)"
+      run: |
+        echo "::set-output name=test::$(echo $RANDOM)"
+        echo "${{ inputs.registry }}/${{ inputs.image }}"
       shell: bash
