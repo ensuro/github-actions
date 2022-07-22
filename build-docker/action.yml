@@ -24,12 +24,23 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: test
-      run: |
-        echo "::set-output name=test::$(echo $RANDOM)"
-        echo "${{ inputs.registry }}/${{ inputs.image }}"
-      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v2
 
-    - run: echo "Conditional step, should not run"
-      if: ${{ inputs.run_tests == 'true' }}
-      shell: bash
+    # Setup gcloud CLI
+    - id: "auth"
+      name: "Authenticate to Google Cloud"
+      uses: "google-github-actions/auth@v0"
+      with:
+        credentials_json: "${{ inputs.google_credentials }}"
+        token_format: "access_token"
+
+    # - id: test
+    #   run: |
+    #     echo "::set-output name=test::$(echo $RANDOM)"
+    #     echo "${{ inputs.registry }}/${{ inputs.image }}"
+    #   shell: bash
+
+    # - run: echo "Conditional step, should not run"
+    #   if: ${{ inputs.run_tests == 'true' }}
+    #   shell: bash
