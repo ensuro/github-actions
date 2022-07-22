@@ -28,5 +28,5 @@ runs:
       shell: bash
 
     - run: echo "Conditional step, should not run"
-      if: inputs.tests
+      if: inputs.run_tests
       shell: bash
