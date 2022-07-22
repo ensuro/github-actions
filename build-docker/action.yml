@@ -18,9 +18,9 @@ inputs:
     default: false
 
 outputs:
-  test:
-    description: "Test output"
-    value: ${{ steps.test.outputs.test }}
+  image_details:
+    description: "Full docker image metadata"
+    value: ${{ steps.meta.outputs }}
 
 runs:
   using: "composite"
@@ -92,13 +92,3 @@ runs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
         cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache,mode=max
-
-    # - id: test
-    #   run: |
-    #     echo "::set-output name=test::$(echo $RANDOM)"
-    #     echo "${{ inputs.registry }}/${{ inputs.image }}"
-    #   shell: bash
-
-    # - run: echo "Conditional step, should not run"
-    #   if: ${{ inputs.run_tests == 'true' }}
-    #   shell: bash
