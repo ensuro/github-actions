@@ -82,6 +82,17 @@ runs:
             --force-recreate
       shell: bash
 
+    - name: Build and push
+      id: build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
+        cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache,mode=max
+
     # - id: test
     #   run: |
     #     echo "::set-output name=test::$(echo $RANDOM)"
