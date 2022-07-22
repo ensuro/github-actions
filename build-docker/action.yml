@@ -16,6 +16,10 @@ inputs:
     description: "Run the tests job using docker-compose"
     required: true
     default: false
+  additional_tag:
+    description: "Additional tag to apply to the image"
+    required: false
+    default: ""
 
 outputs:
   tags:
@@ -64,7 +68,8 @@ runs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=sha
-          type=raw,value=${{ github.event.inputs.version }}
+          type=raw,value={{date 'YYYYMMDD'}}
+          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build image locally for testing
