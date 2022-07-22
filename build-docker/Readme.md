@@ -45,6 +45,13 @@ jobs:
           google_credentials: "${{ secrets.GOOGLE_CREDENTIALS }}"
 ```
 
+There are other optional arguments for controlling testing and tags:
+
+- `additional_tag`: Set an additional tag, for instance from a manual run input
+- `run_tests`: Set tu true to run the tests (requires `test_script`)
+- `test_script`: A script to run to test the built image. Similar usage to `run: ` in a standard job
+- `test_build_args`: Additional build args for the image built for testing. Example `test_build_args: APP_ENV=ci`
+
 ### To create a service account and obtain its credentials
 
 ```bash
