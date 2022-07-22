@@ -8,6 +8,10 @@ inputs:
     default: "us-docker.pkg.dev"
   image:
     description: "Image name (without version tag)"
+  run_tests:
+    description: "Run the tests job using docker-compose"
+    required: true
+    default: false
 
 outputs:
   test:
@@ -22,3 +26,6 @@ runs:
         echo "::set-output name=test::$(echo $RANDOM)"
         echo "${{ inputs.registry }}/${{ inputs.image }}"
       shell: bash
+
+    - run: echo "Conditional step, should not run"
+      if: inputs.tests
