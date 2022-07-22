@@ -16,6 +16,12 @@ inputs:
     description: "Run the tests job using docker-compose"
     required: true
     default: false
+  test_script:
+    description: "Script to run for image testing"
+    required: false
+    default: |
+      echo "ERROR: test_script not defined. Either define it or set run_tests to false" >&2
+      exit 13
   additional_tag:
     description: "Additional tag to apply to the image"
     required: false
@@ -83,11 +89,7 @@ runs:
 
     - name: Test the image
       if: ${{ inputs.run_tests == 'true' }}
-      run: |
-        docker-compose -f docker-compose.test-image.yml up \
-            --exit-code-from tests \
-            --abort-on-container-exit \
-            --force-recreate
+      run: ${{ inputs.test_script }}
       shell: bash
 
     - name: Build and push
