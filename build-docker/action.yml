@@ -1,0 +1,28 @@
+name: "Docker Build Test Push"
+description: "Builds a docker image, runs tests if available, uploads to registry"
+
+inputs:
+  IMAGE: solid-range-319205/ensuro/ens-monitor-app
+  REGISTRY_HOSTNAME: us-docker.pkg.dev
+  TEST_IMAGE_TAG: test
+  registry:
+    description: "Image registry to use"
+    required: true
+    default: "us-docker.pkg.dev"
+  image:
+    description: "Image name (without version tag)"
+
+outputs:
+  test:
+    description: "Test output"
+    value: ${{ steps.test.outputs.test }}
+
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        echo "${{ inputs.registry }}/${{ inputs.image }}"
+
+    - id: test
+      run: echo "::set-output name=test::$(echo $RANDOM)"
+      shell: bash
