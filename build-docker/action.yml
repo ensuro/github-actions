@@ -18,9 +18,12 @@ inputs:
     default: false
 
 outputs:
-  image_details:
-    description: "Full docker image metadata"
-    value: ${{ steps.meta.outputs }}
+  tags:
+    description: "Image tags"
+    value: ${{ steps.meta.outputs.tags }}
+  labels:
+    description: "Image labels"
+    value: ${{ steps.meta.outputs.labels }}
 
 runs:
   using: "composite"
