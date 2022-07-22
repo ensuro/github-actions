@@ -1,7 +1,10 @@
 name: "Docker Build Test Push"
-description: "Builds a docker image, runs tests if available, uploads to registry"
+description: "Build image, run tests and push to pkg.dev"
 
 inputs:
+  google_credentials:
+    description: "Google credentials for registry"
+    required: true
   registry:
     description: "Image registry to use"
     required: true
