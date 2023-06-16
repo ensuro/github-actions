@@ -102,8 +102,8 @@ runs:
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
-        build-args:
-          APP_VERSION: ${{steps.meta.outputs.version}}
+        build-args: |
+          "APP_VERSION=${{steps.meta.outputs.version}}"
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
