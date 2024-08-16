@@ -55,18 +55,14 @@ There are other optional arguments for controlling testing and tags:
 ### To create a service account and obtain its credentials
 
 ```bash
-REPOSITORY=ens-simulator
-LOCATION=us-central1
-ACCOUNT_NAME=gh-$REPOSITORY
+ACCOUNT_NAME=gh-ens-simulator
+REPOSITORY=ensuro
+LOCATION=us
 
 # Create the account
 SERVICE_ACCOUNT_EMAIL=$(gcloud iam service-accounts create $ACCOUNT_NAME \
     --display-name="Github actions ${ACCOUNT_NAME}" \
     --format="value(email)")
-
-# Create the repository if it doesn't exist
-gcloud artifacts repositories describe --location $LOCATION $REPOSITORY \
-  || gcloud artifacts repositories create --location=$LOCATION --repository-format=docker $REPOSITORY
 
 # Grant permissions on the artifacts repo
 gcloud artifacts repositories add-iam-policy-binding $REPOSITORY \
