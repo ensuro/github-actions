@@ -56,32 +56,37 @@ There are other optional arguments for controlling testing and tags:
 
 ```bash
 ACCOUNT_NAME=gh-ens-simulator
-PROJECT_ID=solid-range-319205
+REPOSITORY=ensuro
+LOCATION=us
 
 # Create the account
-gcloud --project "${PROJECT_ID}" iam service-accounts create ${ACCOUNT_NAME} \
-    --description="Github actions ${ACCOUNT_NAME}" \
-    --display-name="Github actions ${ACCOUNT_NAME}"
+SERVICE_ACCOUNT_EMAIL=$(gcloud iam service-accounts create $ACCOUNT_NAME \
+    --display-name="Github actions ${ACCOUNT_NAME}" \
+    --format="value(email)")
 
-# Grant permissions on pkg.dev
-for role in "roles/artifactregistry.admin" \
-             "roles/artifactregistry.repoAdmin" \
-             "roles/iam.serviceAccountTokenCreator" \
-             "roles/serviceusage.apiKeysViewer"
-do
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} --member \
-        serviceAccount:"${ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
-        --role "${role}" \
-        --no-user-output-enabled --quiet
-done
+# Grant permissions on the artifacts repo
+gcloud artifacts repositories add-iam-policy-binding $REPOSITORY \
+   --location=$LOCATION \
+   --member=serviceAccount:"$SERVICE_ACCOUNT_EMAIL" \
+   --role=roles/artifactregistry.writer
 
+# Grant the account permissions to create access tokens for itself
+gcloud iam service-accounts add-iam-policy-binding "$SERVICE_ACCOUNT_EMAIL"\
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role=roles/iam.serviceAccountTokenCreator
 
 # Export account key (BE CAREFUL NOT TO COMMIT THIS FILE!)
 gcloud iam service-accounts keys create "credentials-${ACCOUNT_NAME}.json" \
-    --iam-account=${ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
+    --iam-account="$SERVICE_ACCOUNT_EMAIL"
 
 ```
 
 Credentials will be in a `credentials-*.json` file. **Be careful not to commit the file to any repo**.
 
 You have to paste the contents on that file in a secret named `GOOGLE_CREDENTIALS` in your repo under Settings -> Secrets -> Actions
+
+It's highly recommended that you convert the json to a single line to paste it into the secret:
+
+```sh
+jq -c < credentials-$ACCOUNT_NAME.json
+```
