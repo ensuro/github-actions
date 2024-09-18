@@ -12,6 +12,9 @@ inputs:
   image:
     description: "Image name (without version tag)"
     required: true
+  build_args:
+    description: "Build arguments to pass on to buildx"
+    required: false
   run_tests:
     description: "Run the tests job using docker-compose"
     required: true
@@ -71,14 +74,14 @@ runs:
         images: |
           ${{ inputs.registry }}/${{ inputs.image }}
         tags: |
+          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }},priority=1500
+          type=semver,pattern={{version}},priority=1300
+          type=semver,pattern={{major}}.{{minor}}
           type=ref,event=branch
           type=ref,event=pr
           type=ref,event=tag
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
           type=sha
           type=raw,value={{date 'YYYYMMDD'}}
-          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build image locally for testing
@@ -106,3 +109,7 @@ runs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
         cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache,mode=max
+        build-args: |
+          ${{ inputs.build_args }}
+          DOCKER_METADATA_OUTPUT_VERSION
+          DOCKER_METADATA_OUTPUT_TAGS

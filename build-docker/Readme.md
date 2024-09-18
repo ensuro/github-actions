@@ -52,6 +52,15 @@ There are other optional arguments for controlling testing and tags:
 - `test_script`: A script to run to test the built image. Similar usage to `run: ` in a standard job
 - `test_build_args`: Additional build args for the image built for testing. Example `test_build_args: APP_ENV=ci`
 
+## Version number
+
+The version number will be exposed as a build arg named `DOCKER_METADATA_OUTPUT_VERSION`. You can use this for setting the version on your package. For example, in a `Dockerfile` for a python app that uses `setuptool_scm` you can do:
+
+```Dockerfile
+ARG DOCKER_METADATA_OUTPUT_VERSION
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=$DOCKER_METADATA_OUTPUT_VERSION
+```
+
 ### To create a service account and obtain its credentials
 
 ```bash
