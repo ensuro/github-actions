@@ -71,14 +71,14 @@ runs:
         images: |
           ${{ inputs.registry }}/${{ inputs.image }}
         tags: |
+          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }},priority=1500
+          type=semver,pattern={{version}},priority=1300
+          type=semver,pattern={{major}}.{{minor}}
           type=ref,event=branch
           type=ref,event=pr
           type=ref,event=tag
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
           type=sha
           type=raw,value={{date 'YYYYMMDD'}}
-          type=raw,value=${{ inputs.additional_tag }},enable=${{ inputs.additional_tag != '' }}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build image locally for testing
