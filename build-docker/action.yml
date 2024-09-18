@@ -109,4 +109,7 @@ runs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache
         cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:buildcache,mode=max
-        build-args: ${{ inputs.build_args }}
+        build-args: |
+          ${{ inputs.build_args }}
+          DOCKER_METADATA_OUTPUT_VERSION
+          DOCKER_METADATA_OUTPUT_TAGS
