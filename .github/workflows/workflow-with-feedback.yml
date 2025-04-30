@@ -1,0 +1,102 @@
+name: Trigger on a PR comment
+
+permissions:
+  pull-requests: write # Required to add a comment
+  checks: write # Required to add a check
+  issues: write # Required to react to the triggering comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  check-comment:
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '/foo') }}
+    runs-on: ubuntu-latest
+    outputs:
+      match-found: ${{ steps.comment-check.outputs.match-found }}
+      matches: ${{ steps.comment-check.outputs.matches }}
+      pr-head-sha: ${{ steps.comment-check.outputs.pr-head-sha }}
+      pr-head-ref: ${{ steps.comment-check.outputs.pr-head-ref }}
+      pr-base-ref: ${{ steps.comment-check.outputs.pr-base-ref }}
+    steps:
+      - id: comment-check
+        name: Check PR Comment
+        uses: ensuro/github-actions/pr-comment-trigger@pr-comment-trigger # Use a tag or commit hash here
+        with:
+          match: "^/foo (?<bar>.*?) (?<baz>.*?)$"
+
+      - name: Debug Outputs
+        run: |
+          echo "Match found: ${{ steps.comment-check.outputs.match-found }}"
+          echo "Matches: ${{ steps.comment-check.outputs.matches }}"
+          echo "PR head SHA: ${{ steps.comment-check.outputs.pr-head-sha }}"
+
+  process-command:
+    needs: check-comment
+    if: ${{ needs.check-comment.outputs.match-found == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a check
+        id: create-check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: check } = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Command: Check Transaction',
+              head_sha: '${{ needs.check-comment.outputs.pr-head-sha }}',
+              status: 'in_progress',
+              output: {
+                title: 'Transaction Check Initiated',
+                summary: 'Processing the check transaction command...'
+              }
+            });
+            return check.id;
+
+      - name: Process Command
+        run: |
+          echo "Processing PR #${{ github.event.issue.number }} ${{ needs.check-comment.outputs.pr-head-ref }} -> ${{ needs.check-comment.outputs.pr-base-ref }}"
+          echo "Bar: ${{ fromJson(needs.check-comment.outputs.matches).bar }}"
+          echo "Baz: ${{ fromJson(needs.check-comment.outputs.matches).baz }}"
+
+      - name: Comment on PR
+        id: comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const matches = JSON.parse(`${{ needs.check-comment.outputs.matches }}`);
+
+            const comment = `## Foo command was executed
+            **Bar**: ${matches.bar || "unknown"}
+            **Baz**: \`${matches.baz || "unknown"}\`
+            **Status**: ✅ Success
+
+            *This check was triggered by a [comment](${{ github.event.comment.html_url }})*`;
+
+            const posted = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.issue.number }},
+              body: comment
+            });
+
+            return posted.url
+
+      - name: Complete the check
+        uses: actions/github-script@v7
+        if: always() # The check should be completed even if the job fails
+        with:
+          script: |
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: ${{ steps.create-check.outputs.result }},
+              status: 'completed',
+              conclusion: '${{ job.status }}',
+              output: {
+                title:'Transaction Check Finished',
+                summary: 'See ${{ steps.comment.outputs.result }}'
+              }
+            });
