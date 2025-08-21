@@ -32,6 +32,10 @@ inputs:
     description: "Additional tag to apply to the image"
     required: false
     default: ""
+  build_context:
+    description: "Directory to use as build context"
+    required: false
+    default: "."
 
 outputs:
   tags:
@@ -87,7 +91,7 @@ runs:
     - name: Build image locally for testing
       uses: docker/build-push-action@v6
       with:
-        context: .
+        context: ${{ inputs.build_context }}
         load: true
         build-args: ${{ inputs.test_build_args }}
         tags: ${{ inputs.registry }}/${{ inputs.image }}:test
@@ -103,7 +107,7 @@ runs:
       id: build
       uses: docker/build-push-action@v2
       with:
-        context: .
+        context: ${{ inputs.build_context }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
