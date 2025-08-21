@@ -1,0 +1,112 @@
+name: "PR Comment Trigger"
+description: "Processes PR comments and extracts information based on regex patterns"
+
+inputs:
+  match:
+    description: "Regex pattern to match against the comment"
+    required: false
+    default: ""
+  ack:
+    description: "Whether to acknowledge the comment with a reaction. Requires permission to write on issues."
+    required: false
+    default: "true"
+
+outputs:
+  pr-number:
+    description: "PR number"
+    value: ${{ fromJson(steps.process-comment.outputs.result).prNumber }}
+  pr-head-sha:
+    description: "HEAD SHA of the PR"
+    value: ${{ fromJson(steps.process-comment.outputs.result).prHeadSha }}
+  pr-head-ref:
+    description: "HEAD branch reference of the PR"
+    value: ${{ fromJson(steps.process-comment.outputs.result).prHeadRef }}
+  pr-base-ref:
+    description: "Base branch reference of the PR (usually main)"
+    value: ${{ fromJson(steps.process-comment.outputs.result).prBaseRef }}
+  comment-body:
+    description: "Full comment body"
+    value: ${{ fromJson(steps.process-comment.outputs.result).commentBody }}
+  matches:
+    description: "JSON object with regex matches"
+    value: ${{ toJson(fromJson(steps.process-comment.outputs.result).matches) }}
+  match-found:
+    description: "Whether the regex matched or not"
+    value: ${{ fromJson(steps.process-comment.outputs.result).matchFound }}
+  comment-id:
+    description: "The ID of the triggering comment"
+    value: ${{ fromJson(steps.process-comment.outputs.result).commentId }}
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Process PR Comment
+      id: process-comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const commentBody = context.payload.comment.body;
+          const issueNumber = context.payload.issue.number;
+          const commentId = context.payload.comment.id;
+
+          // Get PR details
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: issueNumber
+          });
+
+          const result = {
+            prNumber: issueNumber,
+            prHeadSha: pr.head.sha,
+            prHeadRef: pr.head.ref,
+            prBaseRef: pr.base.ref,
+            commentBody: commentBody,
+            commentId: commentId,
+            matches: {},
+            matchFound: true
+          };
+
+          // Process regex match if pattern provided
+          const matchPattern = '${{ inputs.match }}';
+          if (matchPattern) {
+            try {
+              const regex = new RegExp(matchPattern, 'm');
+              const match = regex.exec(commentBody);
+
+              if (match) {
+                result.matchFound = true;
+
+                // Add numbered groups
+                for (let i = 1; i < match.length; i++) {
+                  result.matches[i-1] = match[i] || "";
+                }
+
+                // Add named groups if they exist
+                if (match.groups) {
+                  Object.assign(result.matches, match.groups);
+                }
+
+                if ('${{ inputs.ack }}'.toLowerCase() === 'true') {
+                  // React to the comment with a thumbs up
+                  await github.rest.reactions.createForIssueComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: commentId,
+                    content: '+1',
+                  });
+                }
+              } else {
+                result.matchFound = false;
+              }
+            } catch (error) {
+              console.log(`Error processing regex: ${error.message}`);
+            }
+          }
+
+          return result;
+    - name: Debug
+      shell: bash
+      run: |
+        echo ${{ steps.process-comment.outputs.result }}
