@@ -1,0 +1,140 @@
+name: "OSV-Scanner"
+description: "Scan dependencies for known vulnerabilities and optionally post a sticky PR comment or upload SARIF results."
+
+inputs:
+  scan-args:
+    description: "Arguments passed to `osv-scanner scan source`, including the path to scan. `--format` and `--verbosity` are set by this action."
+    required: false
+    default: |-
+      --recursive
+      --no-resolve
+      ./
+  osv-scanner-version:
+    description: "OSV-Scanner release version to download."
+    required: false
+    default: "v2.5.0"
+  comment:
+    description: "Post or update a sticky PR comment with the markdown results. Cannot be used together with upload-sarif."
+    required: false
+    default: "false"
+  comment-header:
+    description: "Sticky comment identifier, used to find and update the existing comment."
+    required: false
+    default: "osv-scanner"
+  upload-sarif:
+    description: "Produce SARIF and upload it to GitHub code scanning. Cannot be used together with comment."
+    required: false
+    default: "false"
+  fail-on-vuln:
+    description: "Fail the step when vulnerabilities or scan errors are found."
+    required: false
+    default: "true"
+
+outputs:
+  format:
+    description: "Output format used by the scan: `markdown` or `sarif`."
+    value: ${{ steps.setup.outputs.format }}
+  results-file:
+    description: "Absolute path to the generated markdown or SARIF results file."
+    value: ${{ steps.setup.outputs.results-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        COMMENT: ${{ inputs.comment }}
+        UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+      run: |
+        if [ "$COMMENT" = "true" ] && [ "$UPLOAD_SARIF" = "true" ]; then
+          echo "::error::comment and upload-sarif cannot both be true because a single scan emits only one format. Use separate steps if you need both."
+          exit 1
+        fi
+
+    - name: Install osv-scanner
+      shell: bash
+      env:
+        VERSION: ${{ inputs.osv-scanner-version }}
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in
+          x86_64|amd64) ARCH=amd64 ;;
+          aarch64|arm64) ARCH=arm64 ;;
+          *)
+            echo "::error::Unsupported architecture: $(uname -m)"
+            exit 1
+            ;;
+        esac
+        mkdir -p "$RUNNER_TEMP/bin"
+        curl -fsSL -o "$RUNNER_TEMP/bin/osv-scanner" \
+          "https://github.com/google/osv-scanner/releases/download/${VERSION}/osv-scanner_linux_${ARCH}"
+        chmod +x "$RUNNER_TEMP/bin/osv-scanner"
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+    - name: Select output format
+      id: setup
+      shell: bash
+      env:
+        UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+      run: |
+        if [ "$UPLOAD_SARIF" = "true" ]; then
+          FORMAT=sarif
+          EXTENSION=sarif
+        else
+          FORMAT=markdown
+          EXTENSION=md
+        fi
+        echo "format=$FORMAT" >> "$GITHUB_OUTPUT"
+        echo "results-file=$RUNNER_TEMP/osv-results.$EXTENSION" >> "$GITHUB_OUTPUT"
+
+    - name: Scan dependencies
+      id: scan
+      continue-on-error: true
+      shell: bash
+      env:
+        SCAN_ARGS: ${{ inputs.scan-args }}
+        FORMAT: ${{ steps.setup.outputs.format }}
+        RESULTS_FILE: ${{ steps.setup.outputs.results-file }}
+      run: |
+        osv-scanner scan source --format="$FORMAT" --verbosity=error $SCAN_ARGS > "$RESULTS_FILE"
+
+    - name: Prepare comment
+      if: ${{ steps.setup.outputs.format == 'markdown' }}
+      shell: bash
+      env:
+        RESULTS_FILE: ${{ steps.setup.outputs.results-file }}
+      run: |
+        {
+          echo "### OSV-Scanner results (${{ github.event.pull_request.head.sha || github.sha }})"
+          echo
+          if [ -s "$RESULTS_FILE" ]; then
+            cat "$RESULTS_FILE"
+          else
+            echo "_OSV-Scanner produced no output._"
+          fi
+        } > "$RUNNER_TEMP/comment.md"
+
+    - name: Add results to job summary
+      if: ${{ steps.setup.outputs.format == 'markdown' }}
+      shell: bash
+      run: |
+        cat "$RUNNER_TEMP/comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Post sticky comment
+      if: ${{ steps.setup.outputs.format == 'markdown' && inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      uses: marocchino/sticky-pull-request-comment@v3.0.5
+      with:
+        header: ${{ inputs.comment-header }}
+        path: ${{ runner.temp }}/comment.md
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ steps.setup.outputs.results-file }}
+
+    - name: Fail if vulnerabilities were found
+      if: ${{ inputs.fail-on-vuln == 'true' && steps.scan.outcome != 'success' }}
+      shell: bash
+      run: exit 1
