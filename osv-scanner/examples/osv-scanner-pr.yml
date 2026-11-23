@@ -1,0 +1,20 @@
+name: OSV-Scanner PR Scan
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ensuro/github-actions/osv-scanner@main
+        with:
+          comment: true
